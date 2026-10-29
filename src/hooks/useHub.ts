@@ -1,0 +1,6 @@
+import {useEffect,useState} from 'react';
+import {defaultQuery} from '../services/repository';
+import type {CatalogQuery} from '../types';
+export function navigate(page:string,params:Record<string,string>={}){const q=new URLSearchParams(params);window.location.hash=`/${page}${q.size?'?'+q:''}`;}
+export function useRoute(){const [hash,setHash]=useState(window.location.hash);useEffect(()=>{const update=()=>setHash(window.location.hash);window.addEventListener('hashchange',update);return()=>window.removeEventListener('hashchange',update);},[]);const [path,search='']=hash.replace(/^#\/?/,'').split('?');const params=new URLSearchParams(search);const q:CatalogQuery={...defaultQuery,...Object.fromEntries(['search','category','department','type','usage','sort'].map(k=>[k,params.get(k)||defaultQuery[k as keyof CatalogQuery]])),page:Math.max(1,Number(params.get('page'))||1)};return {page:path||'overview',params,query:q};}
+export function useAsync<T>(load:()=>Promise<T>,deps:unknown[]){const [data,setData]=useState<T>();const [error,setError]=useState('');const [retry,setRetry]=useState(0);useEffect(()=>{let active=true;setError('');load().then(d=>{if(active)setData(d);}).catch(()=>{if(active)setError('Unable to load this view. Please try again.');});return()=>{active=false;};},[...deps,retry]);return {data,error,retry:()=>setRetry(x=>x+1)};}

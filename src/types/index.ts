@@ -1,0 +1,10 @@
+export type ParameterValue = string | string[];
+export type ReportParameter = {id:string;label:string;kind:'date'|'text'|'select'|'multi-select';required?:boolean;options?:string[]};
+export type Report = {id:string;code:string;name:string;description:string;categoryId:string;department:string;reportType:string;outputFormats:string[];owner:string;typicalExecutionTimeSeconds:number;updatedAt:string;createdAt:string;keywords:string[];parameters:ReportParameter[];lastUsedAt:string;usageCount:number};
+export type Category = {id:string;name:string;description:string;department:string;color:string};
+export type ActivityKind = 'viewed'|'favorite-added'|'favorite-removed'|'demo-started'|'demo-completed';
+export type Activity = {id:string;reportId:string;kind:ActivityKind;at:string;source:'seed'|'local'};
+export type CatalogQuery = {search:string;category:string;department:string;type:string;usage:string;sort:string;page:number};
+export type PageResult<T> = {items:T[];total:number;pages:number};
+export type Preferences = {view:'list'|'grid';density:'comfortable'|'compact'};
+export type ExecutionState = 'idle'|'processing'|'success';

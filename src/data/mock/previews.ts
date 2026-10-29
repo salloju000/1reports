@@ -1,0 +1,1 @@
+export const samplePreview={company:'Northstar Packaging Ltd.',columns:['Branch','Reference','Sample value'],rows:[['Mumbai','DEMO-001','125,400.00'],['Pune','DEMO-002','86,250.00'],['Bengaluru','DEMO-003','64,800.00']]};
