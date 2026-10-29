@@ -1,15 +1,11 @@
 import {
   ArrowRight,
   ArrowUpRight,
-  BookOpen,
   ChevronRight,
   Clock3,
   FileText,
-  FolderOpen,
-  Star,
   TrendingUp,
 } from "lucide-react";
-import type { ElementType } from "react";
 import { CategoryCards, ErrorState, Loading } from "../components/Workspace";
 import { Favorite, date } from "../components/Reports";
 import { navigate, useAsync } from "../hooks/useHub";
@@ -35,45 +31,20 @@ export function Overview({
     return <ErrorState text={result.error} retry={result.retry} />;
   if (!result.data) return <Loading />;
   const dashboard = result.data;
-  const stats: [number, string, string, ElementType, string][] = [
-    [
-      dashboard.total,
-      "Total Reports",
-      "Across your organization",
-      FileText,
-      "reports",
-    ],
-    [
-      dashboard.categoryCount,
-      "Categories",
-      "Organized by business function",
-      FolderOpen,
-      "categories",
-    ],
-    [
-      dashboard.favoriteCount,
-      "Favorites",
-      "Your personal report collection",
-      Star,
-      "favorites",
-    ],
-    [
-      dashboard.recent.length,
-      "Recently Used",
-      "Sample and prototype activity",
-      Clock3,
-      "recent",
-    ],
+  const stats: [number, string, string][] = [
+    [dashboard.total, "Total Reports", "reports"],
+    [dashboard.categoryCount, "Categories", "categories"],
+    [dashboard.favoriteCount, "Favorites", "favorites"],
+    [dashboard.recent.length, "Recently Used", "recent"],
   ];
   return (
     <>
       <div className="page-heading">
         <div>
-          <div className="eyebrow">YOUR REPORTING WORKSPACE</div>
-          <h1>Everything you need. All in one place.</h1>
+          <h1>Overview</h1>
           <p>
             Welcome back, {metadata?.user.name.split(" ")[0]}. Find the right
-            report and get straight to work.
+            report and continue your work.
           </p>
         </div>
         <button className="button primary" onClick={() => navigate("reports")}>
@@ -82,23 +53,14 @@ export function Overview({
         </button>
       </div>
       <div className="stats-grid">
-        {stats.map(([value, label, sub, Icon, page], i) => (
+        {stats.map(([value, label, page]) => (
           <button
             className="stat-card"
             key={label}
             onClick={() => navigate(page)}
           >
-            <div>
-              <span>{label}</span>
-              <span className={`stat-icon stat-${i}`}>
-                <Icon size={19} />
-              </span>
-            </div>
             <strong>{value}</strong>
-            <small>
-              {sub}
-              <ArrowUpRight size={13} />
-            </small>
+            <span>{label}</span>
           </button>
         ))}
       </div>
@@ -232,27 +194,6 @@ export function Overview({
           </button>
         </div>
         <CategoryCards />
-      </section>
-      <section className="quick-access">
-        <div>
-          <span className="quick-icon">
-            <BookOpen size={22} />
-          </span>
-          <div>
-            <h3>A faster route to your next answer</h3>
-            <p>
-              Discover reports, build your favorites, and keep your work moving.
-            </p>
-          </div>
-        </div>
-        <button className="button" onClick={() => navigate("favorites")}>
-          <Star size={15} />
-          Open favorites
-        </button>
-        <button className="button" onClick={() => navigate("reports")}>
-          Explore the catalog
-          <ArrowRight size={15} />
-        </button>
       </section>
     </>
   );

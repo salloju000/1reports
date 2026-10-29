@@ -2,12 +2,9 @@ import { useEffect, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
-  Clock3,
   Grid2X2,
   List,
   Search,
-  ShieldCheck,
-  SlidersHorizontal,
   X,
 } from "lucide-react";
 import type { CatalogQuery, Preferences } from "../types";
@@ -90,7 +87,6 @@ export function Catalog({
     <>
       <div className="page-heading">
         <div>
-          <div className="eyebrow">REPORT LIBRARY</div>
           <h1>
             {page === "favorites" ? "Favorites" : "All Reports"}{" "}
             <span className="heading-count">
@@ -102,10 +98,6 @@ export function Catalog({
               ? "Your essential reports, collected in one place."
               : "Find, explore, and access every report from a single workspace."}
           </p>
-        </div>
-        <div className="catalog-note">
-          <ShieldCheck size={15} />
-          Sample catalog · no live connection
         </div>
       </div>
       <section className="panel catalog-panel">
@@ -120,7 +112,7 @@ export function Catalog({
             <Search size={18} />
             <input
               aria-label="Search report catalog"
-              placeholder="Search by report name, code, or keyword..."
+              placeholder="Find a report by name, code, or keyword"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -138,9 +130,6 @@ export function Catalog({
               </button>
             )}
           </form>
-          <span className="catalog-divider" />
-          <SlidersHorizontal className="filter-label-icon" size={17} />
-          <span className="filter-label">Filters</span>
           <div className="view-toggle" aria-label="Report view">
             <button
               aria-label="List view"
@@ -162,7 +151,7 @@ export function Catalog({
         </div>
         <div className="filters">
           <label>
-            <span>Category</span>
+            <span className="sr-only">Category</span>
             <select
               aria-label="Filter by category"
               value={query.category}
@@ -177,7 +166,7 @@ export function Catalog({
             </select>
           </label>
           <label>
-            <span>Department</span>
+            <span className="sr-only">Department</span>
             <select
               aria-label="Filter by department"
               value={query.department}
@@ -190,7 +179,7 @@ export function Catalog({
             </select>
           </label>
           <label>
-            <span>Report type</span>
+            <span className="sr-only">Report type</span>
             <select
               aria-label="Filter by report type"
               value={query.type}
@@ -203,7 +192,7 @@ export function Catalog({
             </select>
           </label>
           <label>
-            <span>Quick filter</span>
+            <span className="sr-only">Quick filter</span>
             <select
               aria-label="Filter by usage or date added"
               value={query.usage}
@@ -329,7 +318,6 @@ export function Catalog({
         </div>
       </section>
       <p className="catalog-footnote">
-        <Clock3 size={14} />
         Execution times are illustrative estimates. Actual performance will
         depend on future backend integration.
       </p>

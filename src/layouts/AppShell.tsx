@@ -11,7 +11,6 @@ import {
   ArrowRight,
   Bell,
   ChevronDown,
-  ChevronRight,
   Clock3,
   FileText,
   FolderOpen,
@@ -22,9 +21,7 @@ import {
   PanelLeftOpen,
   Search,
   Settings,
-  ShieldCheck,
   Star,
-  ArrowUpRight,
 } from "lucide-react";
 import type { CatalogMetadata, Preferences } from "../types";
 import { navigate } from "../hooks/useHub";
@@ -187,16 +184,11 @@ export function AppShell({
         >
           <span className="brand-mark">
             e<span>fi</span>
-            <i />
           </span>
           <span className="brand-copy">
-            Reporting Hub<span>YOUR REPORTS. CONNECTED.</span>
+            Reporting Hub<span>EFI Radius Classic</span>
           </span>
         </a>
-        <div className="workspace-label">
-          <span>WORKSPACE</span>
-          <span className="workspace-dot" />
-        </div>
         <nav>
           {nav.map(([id, label, Icon]) => (
             <a
@@ -207,7 +199,7 @@ export function AppShell({
               aria-current={route.page === id ? "page" : undefined}
               className={route.page === id ? "active" : ""}
             >
-              <Icon size={19} />
+              <Icon size={17} strokeWidth={1.7} />
               <span>{label}</span>
               {id === "reports" && <small>{metadata.total}</small>}
               {id === "favorites" && <small>{favoritesCount}</small>}
@@ -215,30 +207,21 @@ export function AppShell({
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="prototype-card">
-            <span className="prototype-icon">
-              <ShieldCheck size={20} />
-            </span>
-            <strong>Built for your workflow</strong>
-            <p>Every report. One place.</p>
-            <span className="prototype-badge">FRONTEND PROTOTYPE</span>
-          </div>
           <nav>
             <a
               aria-label="Help & Support"
               href="#/help"
               className={route.page === "help" ? "active" : ""}
             >
-              <HelpCircle size={19} />
+              <HelpCircle size={17} strokeWidth={1.7} />
               <span>Help & Support</span>
-              <ArrowUpRight size={13} />
             </a>
             <a
               aria-label="Settings"
               href="#/settings"
               className={route.page === "settings" ? "active" : ""}
             >
-              <Settings size={19} />
+              <Settings size={17} strokeWidth={1.7} />
               <span>Settings</span>
             </a>
           </nav>
@@ -280,16 +263,17 @@ export function AppShell({
             >
               <Menu size={21} />
             </button>
-            <span>Workspace</span>
-            <ChevronRight size={14} />
-            <strong>{title}</strong>
+            <div className="header-context">
+              <span>{user.company}</span>
+              <span className="environment-label">Demo</span>
+            </div>
           </div>
           <div className="topbar-right">
             <form className="global-search" onSubmit={globalSubmit}>
               <Search size={16} />
               <input
                 aria-label="Search all reports"
-                placeholder="Search reports, codes, keywords..."
+                placeholder="Search all reports"
                 value={globalSearch}
                 onChange={(e) => setGlobalSearch(e.target.value)}
               />
@@ -297,10 +281,6 @@ export function AppShell({
                 <ArrowRight size={14} />
               </button>
             </form>
-            <span className="demo-pill">
-              <span />
-              Demo workspace
-            </span>
             <div className="popover-anchor">
               <button
                 className="icon-button notification-button"
@@ -341,12 +321,14 @@ export function AppShell({
             </div>
             <div className="popover-anchor">
               <button
-                className="avatar top-avatar"
+                className="profile-control"
                 aria-label="Open profile menu"
                 aria-expanded={menu === "profile"}
                 onClick={() => setMenu(menu === "profile" ? null : "profile")}
               >
-                {user.initials}
+                <span className="avatar top-avatar">{user.initials}</span>
+                <span className="profile-name">{user.name.split(" ")[0]}</span>
+                <ChevronDown size={12} />
               </button>
               {menu === "profile" && (
                 <div
@@ -371,19 +353,6 @@ export function AppShell({
           </div>
         </header>
         <main id="main-content" tabIndex={-1}>
-          <div className="workspace-notice">
-            <span>
-              <span className="notice-dot" />
-              PROTOTYPE WORKSPACE
-            </span>
-            <p>
-              Explore with confidence. All reports and activity use
-              demonstration data.
-            </p>
-            <span className="notice-end">
-              No live systems connected <ShieldCheck size={13} />
-            </span>
-          </div>
           {children}
           <footer>
             <span>

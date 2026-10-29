@@ -2,6 +2,8 @@
 
 Interactive frontend demonstration for centralized EFI Radius Classic report discovery. Built with React, strict TypeScript, Vite, Tailwind CSS, and Lucide React.
 
+The visual system uses a light stone navigation rail, a slim neutral toolbar, a white content canvas, and a restrained teal accent. Shared tokens live in `src/design-tokens.css`; component styles live in `src/styles.css`. See [DESIGN.md](DESIGN.md) for the redesign diagnosis, decisions, and rendered verification.
+
 ## Run locally
 
 ```sh

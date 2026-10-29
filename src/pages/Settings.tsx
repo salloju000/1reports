@@ -20,7 +20,7 @@ export function SettingsPage({
         <section className="panel settings-panel">
           <h2>Profile</h2>
           <div className="profile-summary">
-            <span className="avatar">AM</span>
+            <span className="avatar">{user.initials}</span>
             <div>
               <strong>{user.name}</strong>
               <p>{user.role}</p>
