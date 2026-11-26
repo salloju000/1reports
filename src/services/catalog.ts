@@ -17,6 +17,7 @@ export const defaultQuery: CatalogQuery = {
 export function normalizeQuery(
   params: URLSearchParams,
   metadata?: CatalogMetadata,
+  live = false,
 ): CatalogQuery {
   const numeric = Number(params.get("page"));
   const sort = params.get("sort");
@@ -27,7 +28,7 @@ export function normalizeQuery(
     department: params.get("department") ?? "",
     type: params.get("type") ?? "",
     sort:
-      sort === "usage" || sort === "time" || sort === "added" ? sort : "name",
+      sort === "usage" || sort === "time" || sort === "added" || sort === "updated" ? sort : "name",
     usage: usage === "frequent" || usage === "new" ? usage : "",
     page: Number.isSafeInteger(numeric) && numeric > 0 ? numeric : 1,
   };
@@ -36,6 +37,10 @@ export function normalizeQuery(
       query.category = "";
     if (!metadata.departments.includes(query.department)) query.department = "";
     if (!metadata.reportTypes.includes(query.type)) query.type = "";
+  }
+  if (live) {
+    if (query.usage === "new") query.usage = "";
+    if (query.sort === "time" || query.sort === "added") query.sort = "name";
   }
   return query;
 }
@@ -89,7 +94,7 @@ export function filterCatalog(
       (!q.type || r.reportType === q.type) &&
       (!q.usage ||
         (q.usage === "frequent"
-          ? r.usageCount >= 20
+          ? r.usageCount >= (r.reportType === "Crystal" ? 1 : 20)
           : Date.parse(r.createdAt) >=
               Date.parse(referenceDate) - 30 * 86400000 &&
             Date.parse(r.createdAt) <= Date.parse(referenceDate))),
@@ -100,6 +105,8 @@ export function filterCatalog(
       : q.sort === "time"
         ? a.typicalExecutionTimeSeconds - b.typicalExecutionTimeSeconds ||
           a.name.localeCompare(b.name)
+        : q.sort === "updated"
+          ? b.updatedAt.localeCompare(a.updatedAt) || a.name.localeCompare(b.name)
         : q.sort === "added"
           ? b.createdAt.localeCompare(a.createdAt) ||
             a.name.localeCompare(b.name)

@@ -37,13 +37,15 @@ export type ActivityKind =
   | "favorite-added"
   | "favorite-removed"
   | "demo-started"
-  | "demo-completed";
+  | "demo-completed"
+  | "run-completed"
+  | "run-failed";
 export type Activity = {
   id: string;
   reportId: string;
   kind: ActivityKind;
   at: string;
-  source: "seed" | "local";
+  source: "seed" | "local" | "server";
 };
 export type ActivityRecord = Activity & {
   report?: Report;
@@ -53,10 +55,10 @@ export type RecentReport = {
   report: Report;
   accessedAt: string;
   source: Activity["source"];
-  status: "viewed" | "demo-started" | "demo-completed";
+  status: "viewed" | "demo-started" | "demo-completed" | "run-completed" | "run-failed";
   categoryName: string;
 };
-export type ReportSort = "name" | "usage" | "time" | "added";
+export type ReportSort = "name" | "usage" | "time" | "added" | "updated";
 export type QuickFilter = "" | "frequent" | "new";
 export type CatalogQuery = {
   search: string;
@@ -96,7 +98,7 @@ export type CatalogMetadata = {
   categories: CategorySummary[];
   departments: string[];
   reportTypes: string[];
-  user: MockUser;
+  user: MockUser | null;
   notifications: Notification[];
 };
 export type DashboardSummary = {

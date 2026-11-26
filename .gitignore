@@ -4,3 +4,13 @@ dist/
 *.tsbuildinfo
 .sites-local/
 *.tar.gz
+
+server/bin/
+server/obj/
+server.tests/bin/
+server.tests/obj/
+crystal-worker/bin/
+crystal-worker/obj/
+publish/backend/
+release/
+publish/release-*/

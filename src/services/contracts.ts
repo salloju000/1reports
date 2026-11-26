@@ -11,7 +11,9 @@ import type {
 } from "../types";
 import type { DemoExecutionService } from "./execution";
 
-export interface ReportRepository extends DemoExecutionService {
+export type DemoReportRepository = ReportRepository & DemoExecutionService;
+
+export interface ReportRepository {
   getReports(query: CatalogQuery, ids?: string[]): Promise<PageResult<Report>>;
   getReport(id: string): Promise<Report | undefined>;
   getMetadata(): Promise<CatalogMetadata>;

@@ -8,7 +8,7 @@ type Stored = {
 };
 const initial = (): Stored => ({
   version: 1,
-  favorites: ["receivable-1", "sales-1", "inventory-1", "finance-2"],
+  favorites: [],
   activity: [],
   preferences: { view: "list", density: "comfortable" },
 });

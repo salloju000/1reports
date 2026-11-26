@@ -10,6 +10,9 @@ import {
 import "@testing-library/jest-dom/vitest";
 import { Details, ReportCollection } from "./Reports";
 import { reports } from "../data/mock/reports";
+import { HubProvider } from "../services/HubContext";
+import { repository } from "../services/repository";
+import { preferencesPersistence } from "../services/storage";
 afterEach(cleanup);
 describe("report interactions", () => {
   it("opens details and toggles favorite through accessible buttons", () => {
@@ -40,13 +43,15 @@ describe("report interactions", () => {
     };
     const changed = vi.fn();
     render(
-      <Details
-        report={reports[0]}
-        favorites={[]}
-        onToggle={vi.fn()}
-        onClose={vi.fn()}
-        onChange={changed}
-      />,
+      <HubProvider repository={repository} persistence={preferencesPersistence}>
+        <Details
+          report={reports[0]}
+          favorites={[]}
+          onToggle={vi.fn()}
+          onClose={vi.fn()}
+          onChange={changed}
+        />
+      </HubProvider>,
     );
     fireEvent.click(screen.getByRole("button", { name: "Run demonstration" }));
     expect(screen.getByText("Company is required.")).toBeInTheDocument();

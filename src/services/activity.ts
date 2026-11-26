@@ -9,7 +9,7 @@ export function recentReports(
   const latest = new Map<string, RecentReport>();
   for (const event of [...events].sort((a, b) => b.at.localeCompare(a.at))) {
     if (
-      !["viewed", "demo-started", "demo-completed"].includes(event.kind) ||
+      !["viewed", "demo-started", "demo-completed", "run-completed", "run-failed"].includes(event.kind) ||
       latest.has(event.reportId)
     )
       continue;

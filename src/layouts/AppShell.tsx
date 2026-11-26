@@ -1,37 +1,39 @@
-import {
-  useEffect,
-  useState,
-  useRef,
-  type ElementType,
-  type FormEvent,
-  type ReactNode,
-} from "react";
+import { useEffect, useState, useRef, type ElementType, type ReactNode } from "react";
 import {
   Activity as ActivityIcon,
-  ArrowRight,
   Bell,
+  Building2,
   ChevronDown,
-  Clock3,
   FileText,
-  FolderOpen,
-  HelpCircle,
+  KeyRound,
   LayoutDashboard,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
-  Search,
   Settings,
   Star,
+  Users,
 } from "lucide-react";
 import type { CatalogMetadata, Preferences } from "../types";
 import { navigate } from "../hooks/useHub";
-const nav: [string, string, ElementType][] = [
+import { Brand, productName } from "../components/Brand";
+import { ReportSearch } from "../components/ReportSearch";
+import { logoUrl, type Organization } from "../services/organization";
+import { useBlockingOperation } from "../services/operations";
+// One entry per destination. Categories are not a destination of their own: they are a filter on Reports,
+// reached from the Overview. Counts live on the page headings, not here.
+type Destination = [string, string, ElementType];
+const nav: Destination[] = [
   ["overview", "Overview", LayoutDashboard],
-  ["reports", "All Reports", FileText],
+  ["reports", "Reports", FileText],
   ["favorites", "Favorites", Star],
-  ["recent", "Recent Reports", Clock3],
-  ["categories", "Categories", FolderOpen],
-  ["activity", "My Activity", ActivityIcon],
+  ["activity", "Activity", ActivityIcon],
+];
+// Shown to administrators only; the server refuses these APIs to everyone else regardless.
+const administration: Destination[] = [
+  ["departments", "Departments", Building2],
+  ["users", "Users", Users],
+  ["access", "Report access", KeyRound],
 ];
 
 export function AppShell({
@@ -39,29 +41,76 @@ export function AppShell({
   metadata,
   title,
   page,
-  favoritesCount,
+  search,
   density,
+  administrator = false,
+  organization,
+  accountControls,
 }: {
   children: ReactNode;
   metadata: CatalogMetadata;
+  /** The page's name, for the browser tab only: the page itself shows its heading. */
   title: string;
   page: string;
-  favoritesCount: number;
+  /** The search term in the URL, shown in the shell's search box on list pages. */
+  search: string;
   density: Preferences["density"];
+  /** Administrators also see the Administration section: Departments, Users and Report access. */
+  administrator?: boolean;
+  /** The organisation's name and logo, shown at the start of the header when an administrator has set them. */
+  organization?: Organization;
+  accountControls?: ReactNode;
 }) {
-  const [collapsed, setCollapsed] = useState(false),
+  const organizationLogo = organization && logoUrl(organization);
+  const showOrganization = !!(organization?.name || organizationLogo);
+  const [collapsed, setCollapsed] = useState(true),
     [mobile, setMobile] = useState(false),
-    [globalSearch, setGlobalSearch] = useState(""),
     [menu, setMenu] = useState<"notifications" | "profile" | null>(null),
     [read, setRead] = useState(false);
   const route = { page };
+  const compact = collapsed;
   const user = metadata.user,
     notifications = metadata.notifications;
   const menuTrigger = useRef<HTMLElement | null>(null);
+  // While a report is generating, links that would leave it are paused (not hidden): they say why, and
+  // come back the moment the report is ready, fails or is cancelled.
+  const running = useBlockingOperation();
+  const paused = running ? "Available when the report is ready" : undefined;
+  const hold = (event: { preventDefault: () => void }) => { if (running) event.preventDefault(); };
+  const link = ([id, label, Icon]: Destination) => (
+    <a
+      key={id}
+      aria-label={label}
+      href={`#/${id}`}
+      data-tooltip={running ? `${label} · ${paused}` : label}
+      title={paused}
+      aria-disabled={running ? true : undefined}
+      onClick={hold}
+      aria-current={route.page === id ? "page" : undefined}
+      className={`${route.page === id ? "active" : ""}${running ? " locked" : ""}`}
+    >
+      <Icon size={18} strokeWidth={1.75} aria-hidden="true" />
+      <span>{label}</span>
+    </a>
+  );
+  // Rail tooltips are for finding a destination by pointing (or by keyboard focus). Pressing an item
+  // hides its tooltip until the pointer leaves, so a click never leaves a label hanging beside the rail.
+  useEffect(() => {
+    const sidebar = document.getElementById("workspace-sidebar");
+    if (!sidebar) return;
+    const press = (event: PointerEvent) => {
+      const item = (event.target as Element | null)?.closest<HTMLElement>("[data-tooltip]");
+      if (!item) return;
+      item.setAttribute("data-tooltip-hidden", "");
+      item.addEventListener("pointerleave", () => item.removeAttribute("data-tooltip-hidden"), { once: true });
+    };
+    sidebar.addEventListener("pointerdown", press);
+    return () => sidebar.removeEventListener("pointerdown", press);
+  }, []);
   useEffect(() => {
     setMobile(false);
     setMenu(null);
-    document.title = title + " · EFI Reporting Hub";
+    document.title = `${title} · ${productName}`;
   }, [page, title]);
   useEffect(() => {
     if (!menu) return;
@@ -149,12 +198,8 @@ export function AppShell({
     };
   }, [mobile]);
 
-  function globalSubmit(event: FormEvent) {
-    event.preventDefault();
-    navigate("reports", { search: globalSearch });
-  }
   return (
-    <div className={`app ${collapsed ? "collapsed" : ""} ${density}`}>
+    <div className={`app ${compact ? "collapsed" : ""} ${density}`}>
       <a
         className="skip-link"
         href="#main-content"
@@ -178,74 +223,55 @@ export function AppShell({
         aria-label="Main navigation"
       >
         <a
-          aria-label="EFI Reporting Hub overview"
-          className="brand"
+          aria-label={`${productName} overview`}
+          className={`brand${running ? " locked" : ""}`}
+          aria-disabled={running ? true : undefined}
+          title={paused}
+          onClick={hold}
           href="#/overview"
         >
-          <span className="brand-mark">
-            e<span>fi</span>
-          </span>
-          <span className="brand-copy">
-            Reporting Hub<span>EFI Radius Classic</span>
-          </span>
+          <Brand />
         </a>
-        <nav>
-          {nav.map(([id, label, Icon]) => (
-            <a
-              key={id}
-              aria-label={label}
-              href={`#/${id}`}
-              title={collapsed ? label : undefined}
-              aria-current={route.page === id ? "page" : undefined}
-              className={route.page === id ? "active" : ""}
-            >
-              <Icon size={17} strokeWidth={1.7} />
-              <span>{label}</span>
-              {id === "reports" && <small>{metadata.total}</small>}
-              {id === "favorites" && <small>{favoritesCount}</small>}
-            </a>
-          ))}
+        <nav aria-label="Workspace">
+          {nav.map(link)}
         </nav>
-        <div className="sidebar-bottom">
-          <nav>
-            <a
-              aria-label="Help & Support"
-              href="#/help"
-              className={route.page === "help" ? "active" : ""}
-            >
-              <HelpCircle size={17} strokeWidth={1.7} />
-              <span>Help & Support</span>
-            </a>
-            <a
-              aria-label="Settings"
-              href="#/settings"
-              className={route.page === "settings" ? "active" : ""}
-            >
-              <Settings size={17} strokeWidth={1.7} />
-              <span>Settings</span>
-            </a>
+        {administrator && (
+          <nav className="sidebar-section" aria-labelledby="sidebar-administration">
+            <h2 id="sidebar-administration">Administration</h2>
+            {administration.map(link)}
           </nav>
-          <button
-            aria-label={`Open settings for ${user.name}`}
-            className="sidebar-user"
-            onClick={() => navigate("settings")}
-          >
-            <span className="avatar">{user.initials}</span>
-            <span>
-              <strong>{user.name}</strong>
-              <small>{user.role}</small>
-            </span>
-            <ChevronDown size={15} />
-          </button>
+        )}
+        <div className="sidebar-bottom">
+          <nav aria-label="Account">
+            {link(["settings", "Settings", Settings])}
+          </nav>
+          {user && (
+            <button
+              aria-label={`Open settings for ${user.name}`}
+              className="sidebar-user"
+              disabled={!!running}
+              title={paused}
+              onClick={() => navigate("settings")}
+            >
+              <span className="avatar">{user.initials}</span>
+              <span>
+                <strong>{user.name}</strong>
+                <small>{user.role}</small>
+              </span>
+              <ChevronDown size={15} />
+            </button>
+          )}
           <button
             className="collapse-button"
             onClick={() => setCollapsed(!collapsed)}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            data-tooltip={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-expanded={!collapsed}
           >
             {collapsed ? (
-              <PanelLeftOpen size={16} />
+              <PanelLeftOpen size={18} strokeWidth={1.75} aria-hidden="true" />
             ) : (
-              <PanelLeftClose size={16} />
+              <PanelLeftClose size={18} strokeWidth={1.75} aria-hidden="true" />
             )}
             <span>Collapse sidebar</span>
           </button>
@@ -253,7 +279,7 @@ export function AppShell({
       </aside>
       <div className="main-shell">
         <header className="topbar">
-          <div className="breadcrumb">
+          <div className="topbar-start">
             <button
               className="icon-button mobile-menu"
               aria-label="Open navigation"
@@ -263,25 +289,18 @@ export function AppShell({
             >
               <Menu size={21} />
             </button>
-            <div className="header-context">
-              <span>{user.company}</span>
-              <span className="environment-label">Demo</span>
-            </div>
+            {showOrganization && (
+              <a className={`organization-brand${organization?.name ? "" : " logo-only"}${running ? " locked" : ""}`}
+                href="#/overview" aria-disabled={running ? true : undefined} onClick={hold}
+                aria-label={organization?.name ? `${organization.name} overview` : "Overview"} title={organization?.name ?? undefined}>
+                {organizationLogo && <img className="organization-logo" src={organizationLogo} alt="" />}
+                {organization?.name && <span className="organization-name">{organization.name}</span>}
+              </a>
+            )}
+            <ReportSearch page={page} term={search} paused={!!running} />
           </div>
           <div className="topbar-right">
-            <form className="global-search" onSubmit={globalSubmit}>
-              <Search size={16} />
-              <input
-                aria-label="Search all reports"
-                placeholder="Search all reports"
-                value={globalSearch}
-                onChange={(e) => setGlobalSearch(e.target.value)}
-              />
-              <button aria-label="Submit global search" type="submit">
-                <ArrowRight size={14} />
-              </button>
-            </form>
-            <div className="popover-anchor">
+            {notifications.length > 0 && <div className="popover-anchor">
               <button
                 className="icon-button notification-button"
                 aria-label="Notifications"
@@ -292,7 +311,7 @@ export function AppShell({
                 }}
               >
                 <Bell size={19} />
-                {!read && <i />}
+                {!read && notifications.length > 0 && <i />}
               </button>
               {menu === "notifications" && (
                 <div
@@ -301,6 +320,7 @@ export function AppShell({
                   aria-label="Notifications"
                 >
                   <strong>Notifications</strong>
+                  {notifications.length === 0 && <p>No notifications.</p>}
                   {notifications.map((n) => (
                     <div key={n.id}>
                       <h4>{n.title}</h4>
@@ -318,52 +338,51 @@ export function AppShell({
                   </button>
                 </div>
               )}
-            </div>
-            <div className="popover-anchor">
-              <button
-                className="profile-control"
-                aria-label="Open profile menu"
-                aria-expanded={menu === "profile"}
-                onClick={() => setMenu(menu === "profile" ? null : "profile")}
-              >
-                <span className="avatar top-avatar">{user.initials}</span>
-                <span className="profile-name">{user.name.split(" ")[0]}</span>
-                <ChevronDown size={12} />
-              </button>
-              {menu === "profile" && (
-                <div
-                  className="popover"
-                  role="dialog"
-                  aria-label="Profile menu"
+            </div>}
+            {user && (
+              <div className="popover-anchor">
+                <button
+                  className="profile-control"
+                  aria-label="Open profile menu"
+                  aria-expanded={menu === "profile"}
+                  onClick={() => setMenu(menu === "profile" ? null : "profile")}
                 >
-                  <strong>{user.name}</strong>
-                  <p>{user.role} · Mock profile</p>
-                  <button
-                    className="button"
-                    onClick={() => {
-                      setMenu(null);
-                      navigate("settings");
-                    }}
+                  <span className="avatar top-avatar">{user.initials}</span>
+                  <span className="profile-name">{user.name.split(" ")[0]}</span>
+                  <ChevronDown size={12} />
+                </button>
+                {menu === "profile" && (
+                  <div
+                    className="popover"
+                    role="dialog"
+                    aria-label="Profile menu"
                   >
-                    Profile & preferences
-                  </button>
-                </div>
-              )}
-            </div>
+                    <strong>{user.name}</strong>
+                    <p>{user.role}</p>
+                    <button
+                      className="button"
+                      disabled={!!running}
+                      title={paused}
+                      onClick={() => {
+                        setMenu(null);
+                        navigate("settings");
+                      }}
+                    >
+                      Profile & preferences
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            {accountControls}
           </div>
         </header>
-        <main id="main-content" tabIndex={-1}>
-          {children}
-          <footer>
-            <span>
-              EFI Reporting Hub <span> / </span> Frontend prototype
-            </span>
-            <span>
-              <span className="notice-dot" />
-              All data is for demonstration purposes
-            </span>
-          </footer>
-        </main>
+        {/* The header stays put: only this region scrolls, so its scrollbar starts below the header. */}
+        <div className="main-scroll">
+          <main id="main-content" tabIndex={-1} data-page={page}>
+            {children}
+          </main>
+        </div>
       </div>
     </div>
   );

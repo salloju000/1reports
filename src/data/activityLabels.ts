@@ -5,4 +5,6 @@ export const eventLabels: Record<Activity["kind"], string> = {
   "favorite-removed": "Removed from favorites",
   "demo-started": "Demo execution started",
   "demo-completed": "Demo execution completed",
+  "run-completed": "Report generated",
+  "run-failed": "Report generation failed",
 };

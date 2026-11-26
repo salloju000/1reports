@@ -1,5 +1,5 @@
 import type { CatalogQuery, Report } from "../types";
-import type { ReportRepository } from "./contracts";
+import type { DemoReportRepository } from "./contracts";
 import { reports, MOCK_REFERENCE_DATE } from "../data/mock/reports";
 import { categories } from "../data/mock/categories";
 import { seededActivity } from "../data/mock/activity";
@@ -28,7 +28,7 @@ const categorySummaries = () =>
     reportCount: reports.filter((r) => r.categoryId === c.id).length,
   }));
 const interactions = new Set<string>();
-export const repository: ReportRepository = {
+export const repository: DemoReportRepository = {
   async getReports(query, ids) {
     return queryReports(
       ids ? reports.filter((r) => ids.includes(r.id)) : reports,

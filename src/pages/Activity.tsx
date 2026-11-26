@@ -3,11 +3,11 @@ import { Activity as ActivityIcon, ArrowRight } from "lucide-react";
 import type { ActivityRecord } from "../types";
 import { eventLabels } from "../data/activityLabels";
 import {
-  PageHeading,
-  Loading,
+  PageHeader,
   ErrorState,
   Empty,
 } from "../components/Workspace";
+import { ActivitySkeleton } from "../components/Skeleton";
 export function ActivityPage({
   activity,
   error,
@@ -26,52 +26,62 @@ export function ActivityPage({
   const filtered = activity.filter(
     (a) => (!kind || a.kind === kind) && (!from || a.at.slice(0, 10) >= from),
   );
+  // The event types offered are the ones that actually occur, with how often; a choice of one is no choice.
+  const kinds = Object.entries(eventLabels)
+    .map(([value, label]) => ({ value, label, count: activity.filter((a) => a.kind === value).length }))
+    .filter((option) => option.count > 0 || option.value === kind);
+  const filtering = !!kind || !!from;
   return (
     <>
-      <PageHeading
-        title="My Activity"
-        description="Your prototype interactions and sample events. This is not a company audit log."
-      />
+      <PageHeader title="Activity" />
       <section className="panel">
-        <div className="activity-filters">
-          <label>
-            Event type
-            <select value={kind} onChange={(e) => setKind(e.target.value)}>
-              <option value="">All events</option>
-              {Object.entries(eventLabels).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            From date
+        <div className="activity-filters" role="group" aria-label="Filter activity">
+          {kinds.length > 1 && (
+            <label className="activity-filter">
+              <span>Event</span>
+              <select value={kind} onChange={(e) => setKind(e.target.value)}>
+                <option value="">All events</option>
+                {kinds.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label} ({option.count})
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label className="activity-filter">
+            <span>From</span>
             <input
               type="date"
               value={from}
+              max={new Date().toISOString().slice(0, 10)}
               onChange={(e) => setFrom(e.target.value)}
             />
           </label>
-          <button
-            className="text-button"
-            onClick={() => {
-              setKind("");
-              setFrom("");
-            }}
-          >
-            Clear filters
-          </button>
-          <span className="muted small">{filtered.length} events</span>
+          {filtering && (
+            <button
+              className="text-button"
+              onClick={() => {
+                setKind("");
+                setFrom("");
+              }}
+            >
+              Clear filters
+            </button>
+          )}
+          <span className="activity-count" role="status">
+            {filtering ? `${filtered.length} of ${activity.length}` : activity.length}{" "}
+            {activity.length === 1 ? "event" : "events"}
+          </span>
         </div>
         {error ? (
           <ErrorState text={error} retry={retry} />
         ) : loading ? (
-          <Loading />
+          <ActivitySkeleton />
         ) : !filtered.length ? (
           <Empty
             title="No activity matches"
-            text="Adjust your filters or explore a report to create prototype activity."
+            text="Adjust your filters or open a report to record activity."
           />
         ) : (
           filtered.map((a) => {
@@ -84,6 +94,7 @@ export function ActivityPage({
                 <div>
                   <button
                     className="report-name"
+                    title={r?.name}
                     onClick={() => onOpen(a.reportId)}
                   >
                     {r?.name ?? "Report unavailable"}
@@ -96,11 +107,11 @@ export function ActivityPage({
                 <span
                   className={`tag ${a.kind.startsWith("demo") ? "orange" : "slate"}`}
                 >
-                  {a.source === "seed"
+                  {a.source === "server" ? eventLabels[a.kind] : a.source === "seed"
                     ? "Sample event"
                     : a.kind.startsWith("demo")
                       ? "Simulated execution"
-                      : "Prototype event"}
+                      : eventLabels[a.kind]}
                 </span>
                 <button
                   className="icon-button"

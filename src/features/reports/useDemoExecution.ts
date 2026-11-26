@@ -10,7 +10,7 @@ import type {
 
 export function useDemoExecution(
   report: Report,
-  service: DemoExecutionService,
+  service: DemoExecutionService | undefined,
   onChange: () => void,
 ) {
   const [state, setState] = useState<ExecutionState>("idle");
@@ -24,6 +24,7 @@ export function useDemoExecution(
   const currentState = useRef<ExecutionState>("idle");
   async function advance(action: "run" | "complete" | "reset") {
     if (pending.current) return;
+    if (!service) return false;
     if (action === "run") {
       if (currentState.current !== "idle") return;
       const nextErrors = validateParameters(report, values);

@@ -41,7 +41,7 @@ describe("independent repository and reliable navigation", () => {
     render(<App {...adapter} />);
     await screen.findByRole("button", { name: alternativeReport.name });
     expect(
-      screen.getByRole("heading", { name: "All Reports 1" }),
+      screen.getByRole("heading", { name: "Reports 1" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("option", { name: "Planning" }),
@@ -55,17 +55,27 @@ describe("independent repository and reliable navigation", () => {
     expect(
       screen.queryByText("Northstar Packaging Ltd."),
     ).not.toBeInTheDocument();
+    // The old categories route lands on the Overview. With a single category there is nothing to browse
+    // by, so the Overview lists the reports themselves.
     window.location.hash = "/categories";
-    await screen.findByRole("button", {
-      name: /Capacity Planning Alternative category/,
-    });
+    await screen.findByRole("heading", { name: "Reports" });
+    expect(window.location.hash).toBe("#/overview");
+    expect(screen.queryByRole("button", { name: /^Capacity Planning/ })).not.toBeInTheDocument();
+  });
+  it("lists the reports on the Overview instead of a lone category", async () => {
+    const adapter = alternativeRepository();
+    window.location.hash = "/overview";
+    render(<App {...adapter} />);
+    await screen.findByRole("heading", { name: "Reports" });
+    expect(screen.getByRole("button", { name: alternativeReport.name })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Browse by category" })).not.toBeInTheDocument();
   });
   it("preserves filters and sorting changed while search is pending", async () => {
     const adapter = alternativeRepository();
     window.location.hash = "/reports";
     render(<App {...adapter} />);
     await screen.findByRole("button", { name: alternativeReport.name });
-    fireEvent.change(screen.getByLabelText("Search report catalog"), {
+    fireEvent.change(screen.getByRole("combobox", { name: "Search reports" }), {
       target: { value: "capacity" },
     });
     fireEvent.change(screen.getByLabelText("Filter by category"), {
@@ -88,7 +98,7 @@ describe("independent repository and reliable navigation", () => {
     window.location.hash =
       "/reports?category=missing&sort=wrong&usage=unknown&page=Infinity";
     render(<App {...adapter} />);
-    await screen.findByText("Showing 1–1 of 1 reports");
+    await screen.findByRole("heading", { name: "Reports 1" });
     await waitFor(() => expect(window.location.hash).toBe("#/reports"));
     window.location.hash = "/reports?page=999";
     await waitFor(() => expect(window.location.hash).toBe("#/reports"));
@@ -151,10 +161,11 @@ describe("accessible controls and activity", () => {
     const adapter = alternativeRepository();
     render(<App {...adapter} />);
     fireEvent.click(
-      await screen.findByRole("button", { name: "Collapse sidebar" }),
+      await screen.findByRole("button", { name: "Expand sidebar" }),
     );
+    fireEvent.click(screen.getByRole("button", { name: "Collapse sidebar" }));
     expect(
-      screen.getByRole("link", { name: "All Reports" }),
+      screen.getByRole("link", { name: "Reports" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Open settings for Taylor Example" }),
@@ -197,10 +208,7 @@ describe("accessible controls and activity", () => {
     window.location.hash = "/recent";
     render(<App {...adapter} />);
     const main = await screen.findByRole("main");
-    await within(main).findByText("Prototype · Simulated execution");
-    expect(
-      within(main).getByText(/Demo execution completed/),
-    ).toBeInTheDocument();
+    expect(await within(main).findByText(/Demo execution completed/)).toBeInTheDocument();
   });
 });
 

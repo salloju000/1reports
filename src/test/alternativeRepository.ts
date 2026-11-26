@@ -4,7 +4,7 @@ import type {
   Preferences,
   Report,
 } from "../types";
-import type { ReportRepository } from "../services/contracts";
+import type { DemoReportRepository } from "../services/contracts";
 import type { PreferencesPersistence } from "../services/preferences";
 import { filterCatalog } from "../services/catalog";
 import { executionTransition } from "../services/execution";
@@ -63,7 +63,7 @@ export function alternativeRepository() {
     },
     notifications: [],
   };
-  const repository: ReportRepository = {
+  const repository: DemoReportRepository = {
     async getMetadata() {
       return metadata;
     },

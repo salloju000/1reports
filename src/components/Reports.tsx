@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import {
   ArrowDownToLine,
   ArrowRight,
@@ -14,6 +14,7 @@ import { useHub } from "../services/HubContext";
 import { ParameterForm } from "../features/reports/ParameterForm";
 import { useDemoExecution } from "../features/reports/useDemoExecution";
 import { useMediaQuery } from "../hooks/useMediaQuery";
+import { ReportGlyph, paperFormat } from "./ReportGlyph";
 export const date = (value: string) =>
   new Date(value).toLocaleDateString("en-IN", {
     day: "2-digit",
@@ -30,16 +31,61 @@ export function Favorite({
   onToggle: (id: string) => void;
 }) {
   const active = favorites.includes(report.id);
+  const pending = useHub().pendingFavorites?.has(report.id) ?? false;
   return (
     <button
       className={`icon-button favorite ${active ? "selected" : ""}`}
       aria-label={`${active ? "Remove" : "Add"} ${report.name} ${active ? "from" : "to"} favorites`}
       aria-pressed={active}
+      aria-busy={pending}
+      disabled={pending}
       onClick={() => onToggle(report.id)}
     >
-      <Star size={17} fill={active ? "currentColor" : "none"} />
+      {pending ? <span className="spinner" aria-hidden="true" />
+        : <Star size={17} fill={active ? "currentColor" : "none"} />}
     </button>
   );
+}
+/**
+ * One compact report line — glyph, name, a line of context and an optional trailing fact.
+ * Shared by every short list in the module (Overview, Recent) so a report always looks and behaves the same.
+ */
+export function ReportRow({
+  report,
+  meta,
+  fact,
+  favorites,
+  onToggle,
+  onOpen,
+}: {
+  report: Report;
+  meta?: ReactNode;
+  fact?: ReactNode;
+  favorites?: string[];
+  onToggle?: (id: string) => void;
+  onOpen: (id: string) => void;
+}) {
+  return (
+    <li className="report-row">
+      <ReportGlyph name={report.name} size={30} />
+      <div className="report-row-main">
+        <button className="report-row-link" onClick={() => onOpen(report.id)}>
+          {report.name}
+        </button>
+        {meta && <span className="report-row-meta">{meta}</span>}
+      </div>
+      {fact && <span className="report-row-fact">{fact}</span>}
+      <span className="report-row-actions">
+        {favorites && onToggle && (
+          <Favorite report={report} favorites={favorites} onToggle={onToggle} />
+        )}
+        <ArrowRight size={16} className="report-row-go" aria-hidden="true" />
+      </span>
+    </li>
+  );
+}
+export function ReportRows({ label, children }: { label: string; children: ReactNode }) {
+  return <ul className="report-rows" aria-label={label}>{children}</ul>;
 }
 type CollectionProps = {
   items: Report[];
@@ -47,6 +93,13 @@ type CollectionProps = {
   favorites: string[];
   onToggle: (id: string) => void;
   onOpen: (id: string, run?: boolean) => void;
+  /** What to show when there is nothing to list; the page knows why the list is empty. */
+  empty?: ReactNode;
+  /** Reports ticked to run together; given only where that is possible. */
+  selected?: string[];
+  onSelect?: (id: string) => void;
+  /** No more can be ticked (the rest stay unticked and disabled). */
+  selectionFull?: boolean;
 };
 export function ReportCollection({
   items,
@@ -54,29 +107,43 @@ export function ReportCollection({
   favorites,
   onToggle,
   onOpen,
+  empty,
+  selected,
+  onSelect,
+  selectionFull = false,
 }: CollectionProps) {
   const { metadata } = useHub();
   const mobile = useMediaQuery("(max-width: 760px)");
   if (!items.length)
-    return (
+    return empty ?? (
       <div className="empty">
-        <FileText size={30} />
+        <FileText size={30} aria-hidden="true" />
         <h3>No reports found</h3>
-        <p>Try another search or clear your filters to explore the catalog.</p>
+        <p>Try another search or clear your filters.</p>
       </div>
     );
   const category = (r: Report) =>
     metadata?.categories.find((c) => c.id === r.categoryId);
+  const pick = (r: Report) => {
+    if (!selected || !onSelect) return null;
+    const ticked = selected.includes(r.id);
+    return (
+      <label className="report-pick" title={!ticked && selectionFull ? "You've selected the most reports that can run together" : `Select ${r.name} to run with others`}>
+        <input type="checkbox" checked={ticked} disabled={!ticked && selectionFull}
+          aria-label={`Select ${r.name} to run with others`} onChange={() => onSelect(r.id)} />
+      </label>
+    );
+  };
+  const selecting = !!selected && !!onSelect;
   const identity = (r: Report) => (
     <div className="report-identity">
-      <span className={`file-icon ${category(r)?.color ?? "blue"}`}>
-        <FileText size={19} />
-      </span>
+      {pick(r)}
+      <ReportGlyph name={r.name} size={30} />
       <div>
-        <button className="report-name" onClick={() => onOpen(r.id)}>
+        <button className="report-name" title={r.name} onClick={() => onOpen(r.id)}>
           {r.name}
         </button>
-        <p>{r.description}</p>
+        <p>{r.description || paperFormat(r.name).text}</p>
       </div>
     </div>
   );
@@ -89,8 +156,8 @@ export function ReportCollection({
     <div className="row-actions">
       <button
         className="icon-button run-demo"
-        aria-label={`Run report demo: ${r.name}`}
-        title="Run report demo"
+        aria-label={`${r.reportType === "Crystal" ? "Generate report" : "Run report demo"}: ${r.name}`}
+        data-tooltip={r.reportType === "Crystal" ? "Generate report" : "Run report demo"}
         onClick={() => onOpen(r.id, true)}
       >
         <Play size={16} />
@@ -107,14 +174,14 @@ export function ReportCollection({
   const cards = (className: string) => (
     <div className={className}>
       {items.map((r) => (
-        <article key={r.id} className="report-item grid">
+        <article key={r.id} className={`report-item grid${selected?.includes(r.id) ? " picked" : ""}`}>
           {identity(r)}
           <span className="report-code">{r.code}</span>
           <span>{tag(r)}</span>
-          <span className="execution-time">
+          {r.typicalExecutionTimeSeconds > 0 && <span className="execution-time">
             <Clock3 size={13} />
             {r.typicalExecutionTimeSeconds}s
-          </span>
+          </span>}
           <div className="card-actions">
             <Favorite report={r} favorites={favorites} onToggle={onToggle} />
             {actions(r)}
@@ -128,7 +195,10 @@ export function ReportCollection({
   return (
     <>
       <div className="report-table-wrap desktop-report-list">
-        <table className="semantic-report-table">
+        {/* Columns no listed report has data for (code, typical time) are hidden rather than left blank. */}
+        <table className={`semantic-report-table${items.some(r => r.code) ? "" : " no-code"}${
+          items.some(r => r.typicalExecutionTimeSeconds > 0) ? "" : " no-time"}${
+          new Set(items.map(r => r.reportType)).size > 1 ? "" : " no-type"}${selecting ? " selecting" : ""}`}>
           <caption className="sr-only">Report catalog results</caption>
           <thead>
             <tr>
@@ -157,7 +227,7 @@ export function ReportCollection({
           </thead>
           <tbody>
             {items.map((r) => (
-              <tr key={r.id}>
+              <tr key={r.id} className={selected?.includes(r.id) ? "picked" : undefined}>
                 <td>{identity(r)}</td>
                 <td>
                   <span className="report-code">{r.code}</span>
@@ -169,7 +239,7 @@ export function ReportCollection({
                 <td>
                   <span className="execution-time">
                     <Clock3 size={13} />
-                    {r.typicalExecutionTimeSeconds}s
+                    {r.typicalExecutionTimeSeconds > 0 ? `${r.typicalExecutionTimeSeconds}s` : "—"}
                   </span>
                 </td>
                 <td>
@@ -211,7 +281,9 @@ export function Details({
   const { repository, metadata } = useHub();
   const dialog = useRef<HTMLDialogElement>(null);
   const parameterSection = useRef<HTMLElement>(null);
-  const demo = useDemoExecution(report, repository, onChange);
+  const demo = useDemoExecution(report,
+    "executeDemo" in repository && "getPreview" in repository ? repository as import("../services/contracts").DemoReportRepository : undefined,
+    onChange);
   const previousState = useRef(demo.state);
   useEffect(() => {
     if (previousState.current === demo.state) return;
@@ -326,7 +398,7 @@ export function Details({
         <div className="demo-note">
           <strong>Frontend demonstration</strong>
           <p>
-            No connection to EFI Radius or Crystal Reports. Parameters and
+            No connection to Radius or Crystal Reports. Parameters and
             output are sample data.
           </p>
         </div>

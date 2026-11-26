@@ -1,45 +1,236 @@
-# EFI Reporting Hub
+# 1Reports
 
-Interactive frontend demonstration for centralized EFI Radius Classic report discovery. Built with React, strict TypeScript, Vite, Tailwind CSS, and Lucide React.
+1Reports is a web workspace for running EFI Radius Classic Crystal Reports from the browser. It has three parts:
 
-The visual system uses a light stone navigation rail, a slim neutral toolbar, a white content canvas, and a restrained teal accent. Shared tokens live in `src/design-tokens.css`; component styles live in `src/styles.css`. See [DESIGN.md](DESIGN.md) for the redesign diagnosis, decisions, and rendered verification.
+| Part | Folder | Technology | Runs on |
+| --- | --- | --- | --- |
+| Web app (what people see) | `src/`, `public/` | React 19, TypeScript, Vite, Tailwind | Any browser |
+| API | `server/` | ASP.NET Core (.NET 10), ASP.NET Core Identity, EF Core, SQL Server | IIS on the report server |
+| Crystal worker | `crystal-worker/` | .NET Framework 4.8 + SAP Crystal Reports runtime | The report server only |
 
-## Run locally
+The API stores employee accounts, departments, report access, favorites, activity and saved database logins in a dedicated SQL Server database (the "Hub" database). When someone runs a report, the API starts the Crystal worker, which reads the `.rpt` template, signs in to the report's database and returns a PDF.
 
-```sh
+---
+
+## 1. Prerequisites
+
+Install these on your development PC:
+
+1. **Git** – https://git-scm.com/download/win
+2. **Node.js 20 or newer** (includes `npm`) – https://nodejs.org
+3. **.NET 10 SDK** – https://dotnet.microsoft.com/download
+4. **EF Core tools** (only needed when you change the database model):
+   ```powershell
+   dotnet tool install --global dotnet-ef
+   ```
+5. **SQL Server** you can reach, plus **SSMS** for running the SQL scripts.
+
+The Crystal worker can only be built and run on a machine with the **SAP Crystal Reports runtime for .NET** installed (the report server). You do not need it to work on the web app or API.
+
+---
+
+## 2. Get the code
+
+```powershell
+git clone https://github.com/salloju000/1reports.git
+```
+
+```powershell
+cd 1reports
+```
+
+```powershell
 npm install
+```
+
+---
+
+## 3. Run it locally
+
+### 3a. Web app only (no sign-in, quickest)
+
+```powershell
+npm run dev:frontend
+```
+
+Open http://127.0.0.1:5173. This shows the workspace shell with empty data. Sign-in and the SQL forms are not available in this mode.
+
+### 3b. Web app + API
+
+```powershell
 npm run dev
 ```
 
-Open the local URL printed by Vite. For validation: `npm test`, `npm run typecheck`, and `npm run build`. `dist/` contains the static production application. Hash routing supports direct links on static hosting.
+This starts Vite and the ASP.NET Core API together (API on `http://127.0.0.1:5182`; set `HUB_DEV_API_PORT` to change it). Without a Hub database the API still starts, but sign-in is disabled.
 
-## Architecture
+### 3c. Full local sign-in (HTTPS + Hub database)
 
-- `src/data/mock/`: 96 realistic reports, eight categories, metadata-driven parameters, mock user, notifications, seeded history, and sample preview.
-- `src/services/contracts.ts`: typed repository boundary for catalog queries, metadata, dashboard summaries, recent history, favorites, and demonstration execution. `repository.ts` is the local mock adapter.
-- `src/services/`: shared query normalization, access-history selectors, strict parameter validation, execution transitions, and versioned local storage. Preferences use a separate persistence interface.
-- `src/hooks/`: URL navigation and asynchronous view loading.
-- `src/components/`: semantic desktop report table, mobile/grid cards, favorites controls, details panel, shared page states, and category cards.
-- `src/features/reports/`: metadata-driven parameter form and serialized demonstration workflow.
-- `src/layouts/`: accessible application shell, sidebar, mobile drawer, and popovers. `src/pages/`: catalog, overview, recent reports, activity, settings, and help.
-- `src/App.tsx`: dependency injection and page coordination; `src/styles.css`: responsive enterprise design.
+Sign-in cookies require HTTPS, so:
 
-Pass a `ReportRepository` and optional `PreferencesPersistence` to `App` to replace its data adapters. Pages and presentation components do not import mock catalogs. `getMetadata` supplies filter options and category counts; paginated queries return the effective page; summaries and previews are adapter-owned. An independent test adapter verifies that alternative categories, totals, user data, reports, and previews render without page changes. No API adapter is implemented in this phase.
+1. Create an empty SQL Server database for development, e.g. `1ReportsDev`.
+2. Create the tables by running `publish/HubIdentity.sql` against it in SSMS (it is idempotent, safe to re-run).
+3. Make a trusted certificate for `localhost` as PEM files (for example with `mkcert localhost`). **Keep the key file outside this repository.**
+4. Set the environment variables in the same PowerShell window and start:
+   ```powershell
+   $env:ConnectionStrings__Hub = "Server=localhost;Database=1ReportsDev;Integrated Security=true;TrustServerCertificate=true"
+   $env:HUB_DEV_HTTPS_CERT = "C:\certs\localhost.pem"
+   $env:HUB_DEV_HTTPS_KEY  = "C:\certs\localhost-key.pem"
+   npm run dev -- --host localhost
+   ```
+5. Create the first administrator account (one time) — see [step 7](#7-create-the-first-administrator).
+6. Open the printed `https://localhost:...` URL and sign in.
 
-## Prototype behavior and limits
+---
 
-No connection to SQL Server, EFI Radius Classic, Crystal Reports, enterprise authentication, or any external API. The sample catalog reference date is 29 October 2026. Frequently used means at least 20 seeded accesses; recently added means within 30 days of that reference date. Catalog count is always the actual 96 mock records.
+## 4. Test before you commit
 
-Favorites, preferences, and up to 500 prototype events persist under `efi-hub-v1` in browser local storage. Four initial favorites and four sample events help demonstrate the experience. Local and sample records are labeled. Storage is per browser and origin; local and hosted versions do not synchronize. Corrupt/unavailable storage falls back to defaults or session state with a notice.
+Run all four. They must pass before building a release.
 
-The catalog's play action opens the parameter section directly. Run demonstration validates real calendar dates, required values, date ordering, and configured selections, then waits for an explicit Show demo result action. Previews use category-specific illustrative data unrelated to parameter choices. No timer pretends to run a report. PDF and Excel actions explain that exports are unavailable; no files are generated. Processing can be canceled or reset; concurrent transitions are prevented. Report execution events are explicitly simulated.
+```powershell
+npm test
+```
 
-Search and filters compose against the latest URL state, and page links remain bounded for large catalogs. Invalid URL values normalize safely. Recent history and dashboard access timestamps use access/execution events, excluding favorite changes. Effect replay does not duplicate deep-link view records. The existing `efi-hub-v1` storage format is preserved.
+```powershell
+npm run typecheck
+```
 
-The light theme is intentional. Profile editing, real exports, permissions, authentication, production auditing, and backend jobs are future work. A private Sites deployment protects the hosted preview; this does not implement enterprise application authentication.
+```powershell
+npm run build
+```
 
-## Verification
+```powershell
+dotnet test server.tests/1Reports.Tests.csproj
+```
 
-40 automated tests cover catalog integrity, queries over 576 records, bounded pagination, malformed URLs, search/filter/sort races, local persistence and fallback, strict date/option validation, serialized demo transitions, reset/cancel behavior, repository failures and retry, independent-adapter rendering, activity accuracy, deep-link effect replay, modal focus restoration, popover/drawer dismissal, navigation names, global search, category links, empty states, and saved display preferences. Run `npm test`, `npm run typecheck`, and `npm run build` to verify.
+---
 
-Browser QA exercised the overview and catalog at desktop size, the catalog at 820px tablet and 390px mobile widths, combined filters, favorite persistence across reload, mobile drawer navigation, activity recording, required-field focus, and the complete demo preview/export-disclosure workflow. No console warnings or errors were observed during those checks. These checks are not a complete screen-reader or cross-browser certification.
+## 5. Changing the database model
+
+When you change anything in `server/HubIdentityDb.cs`:
+
+1. Add a migration:
+   ```powershell
+   dotnet ef migrations add <ShortName> --project server
+   ```
+2. Regenerate the full deployment script (the publish script refuses to build if this is stale):
+   ```powershell
+   dotnet ef migrations script --idempotent --project server --output publish/HubIdentity.sql
+   ```
+3. Write a matching `scripts/create-<name>.sql` for the DBA that applies just this migration and grants the `IIS APPPOOL\1Reports` user what it needs (copy an existing `scripts/create-*.sql` as a template).
+
+---
+
+## 6. Build a release for IIS
+
+Run this from the repository folder in **Windows PowerShell** (as its own process, so harmless npm warnings don't stop it):
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File scripts/publish-iis.ps1 -OutputDirectory publish/release-<yyyymmdd>-<name>
+```
+
+The script:
+
+1. Checks `publish/HubIdentity.sql` includes the newest migration.
+2. Publishes the API as a self-contained `win-x64` app (`1Reports.exe`, `web.config`).
+3. Builds the web app into `wwwroot/` with base path `/1Reports/` (change with `-BasePath`).
+4. Copies `HubIdentity.sql` and writes `release-manifest.json` with a SHA-256 hash of every file.
+
+The output folder must not already exist. Release folders are ignored by Git.
+
+---
+
+## 7. Deploy to the server
+
+The live server is `WIN-4IIIIVPF045` (IIS site folder `C:\publish\1Reports`, app pool `1Reports`, URL path `/1Reports/`, Hub database `testIdentity`). It is reached through Remote Desktop; the dev PC's `D:` drive appears there as `\\tsclient\D`.
+
+1. **Copy the release** folder to the server's `C:\publish\` (running from `\\tsclient` works but is very slow).
+2. **Database first.** A DBA runs the release's new SQL in SSMS on the Hub instance: each new `scripts/create-*.sql` / `scripts/add-*.sql`, in the order written at the top of each file. All are safe to run more than once.
+3. **Deploy the files.** On the server, in an **Administrator** PowerShell:
+   ```powershell
+   & '\\tsclient\D\SSSSS\EFI Reports\scripts\deploy-release.ps1' -Release 'C:\publish\release-<name>' -DatabaseUpdated
+   ```
+   (The script itself can be run from the mapped drive; only the release files need to be local.) It verifies every file against the manifest, stops the pool, backs up and replaces only changed files, **never touches `web.config` or `appsettings*.json`**, starts the pool, and rolls back automatically if anything fails.
+4. **If the Crystal worker changed**, rebuild it on the server (step 8).
+5. **Check it's live:**
+   ```powershell
+   [Net.ServicePointManager]::SecurityProtocol = 'Tls12'; (Invoke-WebRequest https://localhost/1Reports/ -UseBasicParsing).StatusCode
+   ```
+   `200` means the site is up. `https://localhost/1Reports/api/auth/me` should answer `401` (API running, not signed in). Then sign in from a browser.
+
+### Create the first administrator
+
+Only needed once for a new Hub database. On the server, run `scripts/start-admin-bootstrap.ps1` (it asks for the passwords with hidden input and never stores them). Locally you can do the same by setting `HUB_BOOTSTRAP_ADMIN=1`, `HUB_ADMIN_EMAIL` and `HUB_ADMIN_PASSWORD` and starting the API once. After that, add everyone else from **Users** inside the app.
+
+---
+
+## 8. Crystal worker (server only)
+
+The worker is not part of the IIS release. Build it on the server, where the Crystal runtime is installed:
+
+```powershell
+& '<repo>\scripts\build-crystal-worker.ps1'
+```
+
+The script finds the Crystal assemblies in the server's GAC (or use `-CrystalSdkDir`). Point the app pool's `Crystal__WorkerPath` at the built `1Reports.Crystal.exe`. The API notices a new worker and re-reads every report template automatically. Always deploy the API and worker together when either changes.
+
+Useful server tools:
+
+- `scripts/explain-crystal-parameters.ps1` – lists every report parameter and how 1Reports handles it (read-only).
+- `scripts/diagnose-crystal-run.sql` – shows the SQL a slow report run is sending (run in SSMS during the run).
+
+---
+
+## 9. Configuration reference
+
+Set these as environment variables on the IIS app pool (or in the server's `appsettings.json`). In environment variables, `__` stands for a nested section. **Never commit passwords or connection strings with passwords.**
+
+| Setting | Purpose |
+| --- | --- |
+| `ConnectionStrings__Hub` | Hub database (accounts, access, activity). Required for sign-in. |
+| `Crystal__WorkerPath` | Full path to `1Reports.Crystal.exe`. |
+| `Crystal__Roots__<name>__Path` | Folder of published `.rpt` templates; `__Category` and `__Roles__0` set the catalog category and who may see it. |
+| `Crystal__Connections__<n>__Source` / `__Database` / `__Provider` | Approved report database, matched to each report's data source. |
+| `Crystal__Connections__<n>__Authentication` | `Integrated` (app pool Windows identity), `Stored` (needs `__User` and `__PasswordEnvironmentVariable`), or `Prompt` (the user types a login per run). |
+| `Crystal__Connections__<n>__Name` | Optional display name for the connection. |
+| `Crystal__RenderTimeoutSeconds` | Max run time, 30–1800, default 300. If raised above ~330 also raise `runTimeout` in `src/pages/CrystalReports.tsx`. |
+| `ReportSql__Host` / `__Port` / `__Database` | Approved target for the admin "SQL connection check" (more with `ReportSql__Targets__0__…`). |
+| `HUB_BASE_PATH` (build time) | URL path of the app. Dev default `/`, release default `/1Reports/`. |
+
+Security notes:
+
+- The `sa` login is refused for every connection.
+- Prompted database logins are sent over HTTPS, passed to the worker on standard input and discarded after the run — never logged or stored in the browser. Saved logins are encrypted with ASP.NET Data Protection (keys in `C:\ProgramData\EFIHub\keys`; don't rename or delete this folder or saved logins can't be decrypted).
+- Five failed database sign-ins in five minutes pause further attempts for that person; five wrong account passwords lock the account for 15 minutes.
+- Only two report runs proceed at once.
+
+---
+
+## 10. Project layout
+
+```
+src/            React web app (pages/, components/, services/, layouts/, hooks/)
+public/         Logo, favicon
+server/         ASP.NET Core API, EF Core migrations in server/Migrations
+server.tests/   API integration tests (xUnit)
+crystal-worker/ Crystal Reports worker (.NET 4.8, server only)
+publish/        HubIdentity.sql (full idempotent DB script); release folders (ignored)
+scripts/        Dev runner, publish/deploy PowerShell, DBA SQL scripts
+```
+
+---
+
+## 11. Push your changes to GitHub
+
+```powershell
+git add -A
+```
+
+```powershell
+git commit -m "Describe what changed"
+```
+
+```powershell
+git push
+```
+
+Check `git status` before committing: never commit `appsettings.Production.json`, certificate keys, or anything with a password.
