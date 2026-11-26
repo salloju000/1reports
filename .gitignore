@@ -14,3 +14,10 @@ crystal-worker/obj/
 publish/backend/
 release/
 publish/release-*/
+
+# Editor / AI tool settings (keep local)
+.claude/
+.openai/
+.vscode/
+.idea/
+.vs/
