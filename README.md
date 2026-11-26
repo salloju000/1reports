@@ -1,6 +1,44 @@
-# 1Reports
+<div align="center">
 
-1Reports is a web workspace for running EFI Radius Classic Crystal Reports from the browser. It has three parts:
+<img src="public/1reports-logo.png" alt="1Reports" width="360">
+
+### Crystal Reports for EFI Radius Classic, in the browser
+
+Find a report, fill in its parameters, and get a PDF — with sign-in, department access and full activity history.
+
+<br>
+
+![React](https://img.shields.io/badge/React-19-20232a?style=flat-square&logo=react&logoColor=61dafb)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178c6?style=flat-square&logo=typescript&logoColor=white)
+![.NET](https://img.shields.io/badge/.NET-10-512bd4?style=flat-square&logo=dotnet&logoColor=white)
+![SQL Server](https://img.shields.io/badge/SQL%20Server-Hub%20DB-cc2927?style=flat-square&logo=microsoftsqlserver&logoColor=white)
+![IIS](https://img.shields.io/badge/Hosted%20on-IIS-0078d4?style=flat-square&logo=windows&logoColor=white)
+![Crystal Reports](https://img.shields.io/badge/Crystal%20Reports-runtime-c9a14a?style=flat-square)
+
+**[Getting started](#1-prerequisites)** ·
+**[Run locally](#3-run-it-locally)** ·
+**[Release](#6-build-a-release-for-iis)** ·
+**[Deploy](#7-deploy-to-the-server)** ·
+**[Configuration](#9-configuration-reference)**
+
+</div>
+
+---
+
+## Features
+
+- **Report catalog** – search, filter and favorite every published Crystal report, grouped by category.
+- **Automatic parameters** – each report's prompts (including subreports, ranges and value lists) are read from the `.rpt` itself; nothing is set up by hand.
+- **PDF output** – runs happen on the server and open in a built-in PDF viewer, with live progress.
+- **Batch reports** – open up to eight reports side by side and run them all with one click.
+- **People and access** – employee accounts, departments and per-department report collections, managed by administrators.
+- **Database sign-in your way** – Windows identity, a stored service login, or a login typed per run; saved logins are encrypted.
+- **Activity history** – a record of the reports each person opened and ran.
+- **Organization branding** – name and logo set from Settings.
+
+## Overview
+
+1Reports has three parts:
 
 | Part | Folder | Technology | Runs on |
 | --- | --- | --- | --- |
